@@ -13,7 +13,7 @@ class BeeKeeperLocationPage extends StatefulWidget {
 }
 
 class _BeeKeeperLocationPageState extends State<BeeKeeperLocationPage> {
-		final String _baseUrl = "http://192.168.171.1/api_bee";
+		final String _baseUrl = "http://10.10.37.179/api_bee";
 	bool isLoading = true;
 	String? error;
 	List<Map<String, dynamic>> beeKeepers = [];

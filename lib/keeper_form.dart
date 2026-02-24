@@ -168,7 +168,7 @@ class _BeeKeeperPageState extends State<BeeKeeperPage> {
 
     try {
       final response = await http.post(
-        Uri.parse("http://192.168.171.1/api_bee/savedatabeekeeper.php"),
+        Uri.parse("http://10.10.37.179/api_bee/savedatabeekeeper.php"),
         body: {
           "xcase": widget.xcase.toString(),
           "userId": widget.userId ?? "",

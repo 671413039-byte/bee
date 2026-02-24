@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'dart:io';
 import 'keeper_list.dart';
 import 'keeper_Location.dart';
+import 'beekeeping_records_list_page.dart';
+import 'harvest_records_list_page.dart';
+import 'harvest_report_list_page.dart';
 
 class MenuPage extends StatelessWidget {
   const MenuPage({super.key});
@@ -11,6 +14,9 @@ class MenuPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> menuItems = [
       {"title": "รายชื่อผู้เลี้ยงผึ้ง", "image": "images/honey-realistic-abstract-composition-with-bees-sitting-amber-honeycombs-vector-illustration_1284-84092.jpg"},
+      {"title": "ข้อมูลการเลี้ยงผึ้ง", "image": "images/honey-realistic-abstract-composition-with-bees-sitting-amber-honeycombs-vector-illustration_1284-84092.jpg"},
+      {"title": "ข้อมูลการเก็บเกี่ยว", "image": "images/honey-realistic-abstract-composition-with-bees-sitting-amber-honeycombs-vector-illustration_1284-84092.jpg"},
+      {"title": "รายงานผลผลิต", "image": "images/honey-realistic-abstract-composition-with-bees-sitting-amber-honeycombs-vector-illustration_1284-84092.jpg"},
     ];
 
     return Scaffold(
@@ -57,9 +63,14 @@ class MenuPage extends StatelessWidget {
                           Navigator.push(context, MaterialPageRoute(builder: (context) => const BeeKeeperListPage()));
                           break;
                         case 1:
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => const BeeKeeperLocationPage()));
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const BeekeepingRecordsListPage()));
                           break;
-
+                        case 2:
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const HarvestRecordsListPage()));
+                          break;
+                        case 3:
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => const HarvestReportListPage()));
+                          break;
                       }
                     },
                     child: Card(

@@ -1,0 +1,245 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'beekeeping_records_form_page.dart';
+
+class BeekeepingRecordsListPage extends StatefulWidget {
+  final int? selectedMemberId;
+
+  const BeekeepingRecordsListPage({
+    super.key,
+    this.selectedMemberId,
+  });
+
+  @override
+  State<BeekeepingRecordsListPage> createState() => _BeekeepingRecordsListPageState();
+}
+
+class _BeekeepingRecordsListPageState extends State<BeekeepingRecordsListPage> {
+  List<Map<String, dynamic>> records = [];
+  bool isLoading = false;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRecords();
+  }
+
+  Future<void> _loadRecords() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      final response = await http.get(
+        Uri.parse("http://10.10.37.179/api_bee/getallbeekeeping_records.php"),
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data["success"] == true) {
+          setState(() {
+            records = List<Map<String, dynamic>>.from(data["data"] ?? []);
+            debugPrint("Loaded ${records.length} records");
+            for (var record in records) {
+              debugPrint("Record: ID=${record['ID']} (${record['ID'].runtimeType}), Date=${record['record_date']} (${record['record_date'].runtimeType}), Amount=${record['amount']}, Name=${record['member_name']}");
+            }
+          });
+        } else {
+          setState(() {
+            errorMessage = data["message"] ?? "ไม่สามารถโหลดข้อมูล";
+          });
+        }
+      } else {
+        setState(() {
+          errorMessage = "Server error: ${response.statusCode}";
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = "เกิดข้อผิดพลาด: $e";
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _deleteRecord(int recordId, String recordDate) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("ยืนยันการลบ"),
+        content: const Text("คุณแน่ใจหรือว่าต้องการลบข้อมูลนี้?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("ยกเลิก"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("ลบ"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      debugPrint("Deleting record: ID=$recordId, Date=$recordDate");
+      
+      final response = await http.post(
+        Uri.parse("http://10.10.37.179/api_bee/savebeekeeping_records.php"),
+        body: {
+          "xcase": "3",
+          "recordId": recordId.toString(),
+          "recordDate": recordDate,
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      debugPrint("Delete response: ${response.statusCode} - ${response.body}");
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data["success"] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(data["message"] ?? "ลบสำเร็จ")),
+          );
+          _loadRecords();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(data["message"] ?? "ลบไม่สำเร็จ")),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Server error: ${response.statusCode}")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("เกิดข้อผิดพลาด: $e")),
+      );
+    }
+  }
+
+  void _openForm({
+    int? recordId,
+    String? date,
+    int? amount,
+    int? memberId,
+    String? memberName,
+    int? xcase,
+  }) async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BeekeepingRecordsFormPage(
+          recordId: recordId,
+          recordDate: date,
+          amount: amount,
+          memberId: memberId,
+          memberName: memberName,
+          xcase: xcase,
+        ),
+      ),
+    );
+
+    if (result == true) {
+      _loadRecords();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("บันทึกการเลี้ยงผึ้ง"),
+        backgroundColor: Colors.orange,
+        actions: [
+          TextButton.icon(
+            onPressed: () => _openForm(xcase: 1),
+            icon: const Icon(Icons.add, color: Colors.white),
+            label: const Text(
+              'เพิ่ม',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : errorMessage != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(errorMessage!),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _loadRecords,
+                        child: const Text("ลองใหม่"),
+                      ),
+                    ],
+                  ),
+                )
+              : records.isEmpty
+                  ? const Center(
+                      child: Text("ไม่มีข้อมูลการเลี้ยงผึ้ง"),
+                    )
+                  : ListView.builder(
+                      itemCount: records.length,
+                      itemBuilder: (context, index) {
+                        final record = records[index];
+                        final recordId = record['ID'] is int ? record['ID'] : int.parse(record['ID'].toString());
+                        final amount = record['amount'] is int ? record['amount'] : int.parse(record['amount'].toString());
+                        
+                        return Card(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 8.0,
+                            vertical: 4.0,
+                          ),
+                          child: ListTile(
+                            title: Text("${record['member_name'] ?? 'ไม่ระบุ'}"),
+                            subtitle: Text(
+                              "วันที่: ${record['record_date']} | จำนวน: ${record['amount']}",
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TextButton(
+                                  onPressed: () {
+                                    _openForm(
+                                      recordId: recordId,
+                                      date: record['record_date'],
+                                      amount: amount,
+                                      memberId: recordId,
+                                      memberName: record['member_name'],
+                                      xcase: 2,
+                                    );
+                                  },
+                                  child: const Text(
+                                    'แก้ไข',
+                                    style: TextStyle(color: Colors.blue),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () => _deleteRecord(recordId, record['record_date']),
+                                  child: const Text(
+                                    'ลบ',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+    );
+  }
+}
